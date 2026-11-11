@@ -17,9 +17,9 @@ Read README.md for the layout.
 
 1. Nap fills `seeds/hooks.md`, `calls/calls.md` and `calls/holdout.md` with his own material.
 2. Add `ANTHROPIC_API_KEY` to `.env`. Run once live and fix what breaks. Only mock mode is tested.
-3. Wire `adapters/jev.js` from the private repo voice-lab-jev. Gate logic only. No writing set, no
-   eval data. Report what Jev returns (score, confidence, or pass/fail only) and how the borderline
-   band will be derived. Wait for Nap's yes before building it.
+3. `adapters/jev.js` is written (Nap's go, 12 Nov) but untested live. Set `GATE=jev`,
+   `TYPESAFE_API_KEY` and `TOTAL=20`, run once, read the token count in the server log, fix what
+   breaks. Only then run the full 200.
 4. Noon: `node scripts/noon-test.js`. Under 80% match, propose swapping the model behind the gate.
    Nap decides.
 5. 3 PM feature freeze. 5 PM three clean run-throughs of the three demo beats.
@@ -46,3 +46,9 @@ Read README.md for the layout.
 - 2026-11-12: After each human call, only the still-waiting cards are re-screened, not all 200.
   Reason: speed on stage. Passed and killed hooks keep their original verdict for that run.
 - 2026-11-12: Default model `claude-haiku-5-5` for speed. Change with `MODEL` in `.env`.
+- 2026-11-12: Jev adapter. Jev returns a probability per yes/no question and no reasons. One
+  overall question gives p(approve); one question per skill-file rule supplies the "why". Band:
+  p between 0.35 and 0.65 goes to the human (`JEV_BORDER`), a starting guess. Key name is
+  `TYPESAFE_API_KEY`. Only the call shape came from voice-lab-jev; no writing set, no eval data.
+- 2026-11-12: Jev's voice eval has no recorded pass (first same-author test failed on position
+  bias; the retest has no result on file). The noon test on Nap's holdout hooks decides the gate.

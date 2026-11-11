@@ -30,12 +30,13 @@ No install step. Needs Node 18 or newer. With no key it runs in MOCK mode and sa
 | Calls | `calls/calls.md` | The human's approve/reject calls with reasons |
 | Skill file | `skills/signoff.md` | Compiled from the calls by `lib/skill.js` |
 | Gate | `lib/gate.js` | `judgeBatch()` returns verdict, confidence, reason |
-| Jev adapter | `adapters/jev.js` | Stub. Wire it, then set `GATE=jev` |
+| Jev adapter | `adapters/jev.js` | One Jev call per hook. Set `GATE=jev` and `TYPESAFE_API_KEY` |
 | Inbox | `public/index.html` | One screen |
 | Server | `server.js` | Three endpoints: state, run, call |
 
 Borderline is derived, not asked for: any verdict with confidence under `BORDER` (default 0.75)
-goes to the human. A gate batch that errors goes to the human too. It is never silently passed.
+goes to the human. With Jev the default is 0.65, which means p(approve) between 0.35 and 0.65.
+Jev gives no reasons, so a card's "why" is the skill-file rules Jev doubts, with their numbers. A gate batch that errors goes to the human too. It is never silently passed.
 
 ## Honesty rules built in
 
@@ -48,11 +49,12 @@ goes to the human. A gate batch that errors goes to the human too. It is never s
 
 ```
 node scripts/smoke-test.js   # wiring test in mock mode, no keys, restores files after
+node scripts/jev-test.js     # Jev adapter against canned answers, offline
 node scripts/noon-test.js    # match rate against calls/holdout.md, bar is 80%
 ```
 
 ## Not done yet
 
-- `adapters/jev.js` is a stub. Until it is wired, the gate is Claude (or mock).
+- `adapters/jev.js` is written but has never called the live Jev API. First live run: `TOTAL=20`.
 - `calls/calls.md`, `calls/holdout.md` and `seeds/hooks.md` hold placeholders, not Nap's taste.
-- Nothing has been run against a live model. Only the mock path is tested.
+- Nothing has been run against a live model. Only the mock path and canned Jev answers are tested.

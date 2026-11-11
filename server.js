@@ -120,6 +120,7 @@ async function startRun(product) {
       last: null,
     };
     saveRun();
+    if (gate.provider() === 'jev') console.log(`Jev input tokens used so far: ${require('./adapters/jev').tokensUsed()}`);
     job = { phase: 'done', done: 1, total: 1, error: null };
   } catch (err) {
     job = { phase: 'error', done: 0, total: 0, error: err.message };

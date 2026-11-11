@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node server.js",
     "noon": "node scripts/noon-test.js",
-    "test": "node scripts/smoke-test.js"
+    "test": "node scripts/smoke-test.js && node scripts/jev-test.js"
   },
   "engines": { "node": ">=18" }
 }
