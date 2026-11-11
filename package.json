@@ -1,0 +1,12 @@
+{
+  "name": "signoff-agent",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Sign-off agent: hooks in, a gate screens them, the human sees only the borderline ones.",
+  "scripts": {
+    "start": "node server.js",
+    "noon": "node scripts/noon-test.js",
+    "test": "node scripts/smoke-test.js"
+  },
+  "engines": { "node": ">=18" }
+}

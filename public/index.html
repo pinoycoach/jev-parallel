@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sign-off Agent</title>
+<style>
+  :root { --bg:#0e0f12; --panel:#17191e; --line:#2a2d35; --text:#f2f3f5; --dim:#9aa0ab; --go:#3ddc84; --stop:#ff5d5d; --ask:#ffc247; --accent:#7aa2ff; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif; }
+  header { display:flex; flex-wrap:wrap; gap:10px; align-items:center; padding:14px 20px; border-bottom:1px solid var(--line); }
+  h1 { font-size:18px; margin:0 auto 0 0; letter-spacing:.3px; }
+  .badge { font-size:12px; padding:3px 9px; border-radius:99px; border:1px solid var(--line); color:var(--dim); }
+  .badge.warn { color:#111; background:var(--ask); border-color:var(--ask); font-weight:600; }
+  main { display:grid; grid-template-columns: minmax(0,1.5fr) minmax(0,1fr); gap:18px; padding:18px 20px; max-width:1300px; margin:0 auto; }
+  @media (max-width:860px){ main{ grid-template-columns:1fr; } }
+  .panel { background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:18px; }
+  .row { display:flex; gap:10px; }
+  input[type=text] { flex:1; min-width:0; background:#0f1014; color:var(--text); border:1px solid var(--line); border-radius:10px; padding:12px 14px; font-size:16px; }
+  button { cursor:pointer; border:0; border-radius:10px; padding:12px 18px; font-size:16px; font-weight:600; }
+  button:disabled { opacity:.45; cursor:default; }
+  .primary { background:var(--accent); color:#0b1020; }
+  .approve { background:var(--go); color:#06210f; flex:1; padding:18px; font-size:19px; }
+  .reject { background:var(--stop); color:#2a0606; flex:1; padding:18px; font-size:19px; }
+  .counts { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin:16px 0 4px; }
+  .count { background:#0f1014; border:1px solid var(--line); border-radius:12px; padding:12px; text-align:center; }
+  .count b { display:block; font-size:34px; line-height:1.1; }
+  .count span { font-size:12px; color:var(--dim); text-transform:uppercase; letter-spacing:.6px; }
+  .count.go b{ color:var(--go);} .count.stop b{ color:var(--stop);} .count.ask b{ color:var(--ask);}
+  .sub { color:var(--dim); font-size:13px; }
+  .card { margin-top:16px; border:1px solid var(--ask); border-radius:14px; padding:20px; background:#1b1a14; }
+  .hook { font-size:26px; line-height:1.25; font-weight:650; margin:6px 0 12px; }
+  .why { color:var(--dim); font-size:14px; margin-bottom:14px; }
+  .locked { display:inline-block; font-size:13px; padding:4px 10px; border-radius:8px; background:#0f1014; border:1px dashed var(--line); color:var(--dim); margin-bottom:14px; }
+  .reveal { margin-top:16px; border-radius:12px; padding:14px 16px; border:1px solid var(--line); background:#0f1014; }
+  .reveal.right { border-color:var(--go); } .reveal.wrong { border-color:var(--stop); }
+  .reveal h3 { margin:0 0 4px; font-size:18px; }
+  pre { white-space:pre-wrap; word-break:break-word; margin:0; font:13px/1.5 ui-monospace,Menlo,Consolas,monospace; }
+  .skill .add { background:rgba(61,220,132,.16); color:#b9f5d2; display:block; border-left:3px solid var(--go); padding-left:8px; }
+  .skill .gone { color:var(--stop); text-decoration:line-through; display:block; opacity:.75; padding-left:11px; }
+  h2 { font-size:13px; color:var(--dim); text-transform:uppercase; letter-spacing:.7px; margin:0 0 10px; }
+  details { margin-top:12px; } summary { cursor:pointer; color:var(--dim); font-size:14px; }
+  details li { font-size:14px; margin:4px 0; } details small { color:var(--dim); }
+  .bar { height:6px; background:#0f1014; border-radius:99px; overflow:hidden; margin-top:10px; }
+  .bar i { display:block; height:100%; width:0; background:var(--accent); transition:width .3s; }
+  .tally { font-size:15px; margin-top:10px; }
+  .err { color:var(--stop); margin-top:10px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Sign-off Agent</h1>
+  <span class="badge" id="b-gate"></span>
+  <span class="badge" id="b-gen"></span>
+  <span class="badge warn" id="b-replay" hidden>REPLAY of a saved run</span>
+  <span class="badge warn" id="b-place" hidden></span>
+</header>
+<main>
+  <section class="panel">
+    <div class="row">
+      <input type="text" id="product" placeholder="Name any product" maxlength="120">
+      <button class="primary" id="run">Make 200 hooks</button>
+    </div>
+    <div class="bar"><i id="bar"></i></div>
+    <div class="sub" id="phase"></div>
+    <div class="err" id="err"></div>
+
+    <div id="results" hidden>
+      <div class="counts">
+        <div class="count"><b id="c-made">0</b><span>made</span></div>
+        <div class="count go"><b id="c-pass">0</b><span>passed</span></div>
+        <div class="count stop"><b id="c-kill">0</b><span>killed</span></div>
+        <div class="count ask"><b id="c-need">0</b><span>need you</span></div>
+      </div>
+      <div class="sub" id="meta"></div>
+
+      <div class="card" id="card" hidden>
+        <div class="sub" id="card-n"></div>
+        <div class="hook" id="card-hook"></div>
+        <div class="why" id="card-why"></div>
+        <div class="locked">The agent has already made its guess. It shows after you call.</div>
+        <div class="row">
+          <button class="approve" id="yes">Approve</button>
+          <button class="reject" id="no">Reject</button>
+        </div>
+      </div>
+      <div class="card" id="empty" hidden style="border-color:var(--go);background:#131b16">
+        <div class="hook">Inbox clear. Nothing needs you.</div>
+      </div>
+
+      <div class="reveal" id="reveal" hidden>
+        <h3 id="rv-title"></h3>
+        <div class="sub" id="rv-sub"></div>
+        <div class="tally" id="rv-tally"></div>
+      </div>
+
+      <details><summary id="s-pass">Passed without you</summary><ul id="l-pass"></ul></details>
+      <details><summary id="s-kill">Killed without you</summary><ul id="l-kill"></ul></details>
+    </div>
+  </section>
+
+  <aside class="panel skill">
+    <h2>Skill file: what it has learned from your calls</h2>
+    <pre id="skill">(nothing yet)</pre>
+  </aside>
+</main>
+
+<script>
+const $ = (id) => document.getElementById(id);
+let state = null, lastDiff = { added: [], removed: [] }, working = false;
+
+async function api(path, body) {
+  const res = await fetch(path, body ? { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify(body) } : undefined);
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'request failed');
+  return data;
+}
+
+function fillList(ul, items) {
+  ul.replaceChildren(...items.map((it) => {
+    const li = document.createElement('li');
+    li.append(it.hook + ' ');
+    const s = document.createElement('small'); s.textContent = '(' + it.reason + ')';
+    li.append(s); return li;
+  }));
+}
+
+function renderSkill(text) {
+  const pre = $('skill'); pre.replaceChildren();
+  const added = new Set(lastDiff.added);
+  for (const line of (text || '(nothing yet)').split('\n')) {
+    const span = document.createElement('span');
+    if (added.has(line.trim())) span.className = 'add';
+    span.textContent = line + '\n'; pre.append(span);
+  }
+  for (const line of lastDiff.removed) {
+    const span = document.createElement('span'); span.className = 'gone';
+    span.textContent = line + '\n'; pre.append(span);
+  }
+}
+
+function render() {
+  const s = state; if (!s) return;
+  $('b-gate').textContent = 'gate: ' + s.providers.gate.toUpperCase();
+  $('b-gen').textContent = 'writer: ' + s.providers.generator.toUpperCase();
+  $('b-gate').className = 'badge' + (s.providers.gate === 'mock' ? ' warn' : '');
+  $('b-gen').className = 'badge' + (s.providers.generator === 'mock' ? ' warn' : '');
+  const w = s.warnings, notes = [];
+  if (w.placeholderCalls) notes.push(w.placeholderCalls + ' placeholder calls');
+  if (w.placeholderSeeds) notes.push(w.placeholderSeeds + ' placeholder seeds');
+  $('b-place').hidden = !notes.length; $('b-place').textContent = notes.join(' · ');
+
+  const j = s.job, running = s.busy && j.phase !== 'done';
+  $('bar').style.width = j.total ? Math.round(100 * j.done / j.total) + '%' : '0%';
+  $('phase').textContent = running ? j.phase + ' ' + j.done + '/' + j.total : '';
+  $('err').textContent = j.error ? 'Run failed: ' + j.error : '';
+  $('run').disabled = s.busy || working;
+
+  renderSkill(s.skill);
+  const r = s.run; $('results').hidden = !r; if (!r) return;
+  $('b-replay').hidden = !r.replay;
+  $('c-made').textContent = r.counts.made; $('c-pass').textContent = r.counts.passed;
+  $('c-kill').textContent = r.counts.killed; $('c-need').textContent = r.counts.needYou;
+  const share = r.counts.made ? Math.round(100 * (r.counts.needYou + r.counts.youDecided) / r.counts.made) : 0;
+  $('meta').textContent = '"' + r.product + '" · you were asked about ' + share + '% of them' +
+    (r.counts.youDecided ? ' · you have called ' + r.counts.youDecided : '') +
+    ' · borderline = confidence under ' + s.providers.border;
+
+  const q = r.queue;
+  $('card').hidden = !q.length; $('empty').hidden = Boolean(q.length);
+  if (q.length) {
+    const c = q[0]; $('card').dataset.id = c.id;
+    $('card-n').textContent = 'Needs you · ' + q.length + ' left';
+    $('card-hook').textContent = c.hook;
+    $('card-why').textContent = 'Why it is unsure: ' + c.reason + ' (confidence ' + c.confidence + ')';
+  }
+  $('yes').disabled = $('no').disabled = s.busy || working;
+
+  const l = r.last; $('reveal').hidden = !l;
+  if (l) {
+    $('reveal').className = 'reveal ' + (l.right ? 'right' : 'wrong');
+    $('rv-title').textContent = l.right
+      ? 'It guessed you: ' + l.agentGuess
+      : 'It guessed ' + l.agentGuess + '. You said ' + l.yourCall + '. Rule rewritten.';
+    const bits = [];
+    if (l.diff.added.length) bits.push(l.diff.added.length + ' rule line(s) added');
+    if (l.diff.removed.length) bits.push(l.diff.removed.length + ' removed');
+    if (l.movedOutOfQueue) bits.push(l.movedOutOfQueue + ' card(s) left your queue');
+    $('rv-sub').textContent = bits.length ? bits.join(' · ') : 'No rule change needed.';
+    $('rv-tally').textContent = 'Guessed your call right ' + r.tally.right + ' of ' + r.tally.guesses + ' times.';
+  }
+  $('s-pass').textContent = 'Passed without you (' + r.passed.length + ')';
+  $('s-kill').textContent = 'Killed without you (' + r.killed.length + ')';
+  fillList($('l-pass'), r.passed); fillList($('l-kill'), r.killed);
+}
+
+async function refresh() { try { state = await api('/api/state'); render(); } catch (e) {} }
+
+$('run').onclick = async () => {
+  const product = $('product').value.trim(); if (!product) { $('product').focus(); return; }
+  lastDiff = { added: [], removed: [] };
+  try { await api('/api/run', { product }); } catch (e) { $('err').textContent = e.message; }
+  refresh();
+};
+$('product').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('run').click(); });
+
+async function call(verdict) {
+  if (working) return; working = true; render();
+  $('phase').textContent = 'Rewriting the rule and re-sorting your queue…';
+  try {
+    const out = await api('/api/call', { id: Number($('card').dataset.id), verdict });
+    lastDiff = out.last.diff; state = out.state;
+  } catch (e) { $('err').textContent = e.message; }
+  working = false; $('phase').textContent = ''; render();
+}
+$('yes').onclick = () => call('APPROVE');
+$('no').onclick = () => call('REJECT');
+
+refresh(); setInterval(() => { if (!working) refresh(); }, 1200);
+</script>
+</body>
+</html>
