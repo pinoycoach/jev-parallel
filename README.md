@@ -18,18 +18,37 @@ learns from what customers said, not only from opinion.
 Built for ManilaHack (Parallel Distribution), Agents bucket. Text only. The judging model behind
 both halves is Jev (TypeSafe), a decision model that returns probabilities, with Claude as a fallback.
 
-## Start
+## Run it in 30 seconds
+
+Needs Node 18 or newer. There is nothing to install.
 
 ```
-cp .env.example .env     # add ANTHROPIC_API_KEY
-node server.js           # http://localhost:3000
+git clone https://github.com/pinoycoach/jev-parallel
+cd jev-parallel
+node server.js
 ```
 
-No install step. Needs Node 18 or newer. With no key it runs in MOCK mode and says so on screen.
+Open http://localhost:3000.
+
+- **With no keys it runs in MOCK mode**, and yellow badges say so. Mock mode uses keyword rules
+  and canned wording. It shows the flow, not the models.
+- **Tab 1, "Who are they?":** paste the lines from `samples/comments.txt` (sixteen invented
+  comments, written for testing) or the comments from any real post, then press Read them.
+- **Tab 2, sign-off:** name a product and press Make 200 hooks. Approve or reject the cards.
+
+For the real models, copy `.env.example` to `.env` and fill in two keys:
+
+```
+ANTHROPIC_API_KEY=   # writes the hooks and compiles the skill file
+TYPESAFE_API_KEY=    # Jev, the judging model
+GATE=jev
+```
+
+`.env` is git-ignored. No key is stored in this repo.
 
 ## The demo
 
-Tab 2 first: a judge pastes the comments from any real post and taps Read. Then tab 1:
+Tab 1 first: a judge pastes the comments from any real post and taps Read. Then tab 2:
 
 1. A judge names any product. 200 hooks are written and screened. The top line shows the real counts.
 2. Only the borderline cards appear, each with why the gate is unsure. The gate's guess is locked.
