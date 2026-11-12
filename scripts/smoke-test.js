@@ -7,6 +7,7 @@ const assert = require('assert');
 
 process.env.GATE = 'mock';
 delete process.env.ANTHROPIC_API_KEY;
+delete process.env.APP_CLAUDE_KEY;
 process.env.PORT = '0';
 process.env.TOTAL = '60';
 
