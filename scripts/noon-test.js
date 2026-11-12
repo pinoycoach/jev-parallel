@@ -26,6 +26,14 @@ const skill = require('../lib/skill');
   const compiled = await skill.compile(calls);
   const results = await gate.screen(holdout.map((h) => h.hook), compiled.text, calls);
 
+  // A hook whose gate call failed has no verdict. It must not be scored as a match or a miss.
+  const errored = results.filter((r) => String(r.reason).startsWith('gate error')).length;
+  if (errored) {
+    console.log(`gate: ${gate.provider()}   hooks tested: ${holdout.length}`);
+    console.log(`NO RESULT: ${errored} of ${holdout.length} gate calls failed, so there is no match rate to report.`);
+    console.log(`first error: ${results.find((r) => String(r.reason).startsWith('gate error')).reason}`);
+    process.exit(2);
+  }
   let match = 0;
   let borderline = 0;
   const misses = [];
