@@ -1,4 +1,4 @@
-# Closed Loop
+# Who are they?
 
 Content is cheap now. Knowing which content brings customers is not. Organic posts carry no ad
 tracking, but they carry comments, and at volume nobody reads them.

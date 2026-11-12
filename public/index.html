@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Closed Loop: sign-off gate + comment reader</title>
+<title>Who are they? Comment reader + sign-off gate</title>
 <style>
   :root { --bg:#0e0f12; --panel:#17191e; --line:#2a2d35; --text:#f2f3f5; --dim:#9aa0ab; --go:#3ddc84; --stop:#ff5d5d; --ask:#ffc247; --accent:#7aa2ff; }
   * { box-sizing:border-box; }
@@ -59,17 +59,17 @@
 </head>
 <body>
 <header>
-  <h1>Closed Loop</h1>
+  <h1>Who are they?</h1>
   <span class="badge" id="b-gate"></span>
   <span class="badge" id="b-gen"></span>
   <span class="badge warn" id="b-replay" hidden>REPLAY of a saved run</span>
   <span class="badge warn" id="b-place" hidden></span>
 </header>
 <nav class="tabs">
-  <button class="tab on" id="t-gate">1 · Before posting: sign-off</button>
-  <button class="tab" id="t-read">2 · After posting: comment reader</button>
+  <button class="tab on" id="t-read">1 · After posting: who are they?</button>
+  <button class="tab" id="t-gate">2 · Before posting: sign-off</button>
 </nav>
-<main id="v-read" hidden>
+<main id="v-read">
   <section class="panel">
     <h2>Paste the comments from one post, one per line</h2>
     <textarea id="cm-text" placeholder="Paste comments here. Nothing is fetched from any platform."></textarea>
@@ -106,7 +106,7 @@
     <div class="sub" style="margin-top:14px">Only what commenters state about themselves. Most say nothing, and those are left out.</div>
   </aside>
 </main>
-<main id="v-gate">
+<main id="v-gate" hidden>
   <section class="panel">
     <div class="row">
       <input type="text" id="product" placeholder="Name any product" maxlength="120">
