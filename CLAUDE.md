@@ -116,3 +116,7 @@ hooks and the teach loop all ran live on Jev on his laptop; the noon test is rec
   avoid hype. Tab 2 now also takes pasted hooks, so it can screen a real mix of copy.
 - 2026-11-12: The hook writer returned only some patterns on live runs (cause not confirmed;
   the error now quotes the model). Writer concurrency is 2 and rate limits are waited out.
+- 2026-11-12: First read of real text: 127 product reviews gathered by Nap's assistant (source
+  not verified, not committed). Read in 4.1s, about 100k Jev tokens. Complaints about taste,
+  texture and bad batches were being filed under trust or fit, so the reader gained two blockers:
+  quality and side_effect.
