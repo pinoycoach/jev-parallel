@@ -100,11 +100,13 @@ node scripts/jev-test.js     # Jev adapter against canned answers, offline
 node scripts/noon-test.js    # match rate against calls/holdout.md, bar is 80%
 ```
 
-## Not done yet
+## Known limits
 
 - Live runs so far are Nap's own, on 12 Nov 2026, and are recorded in CLAUDE.md under Decisions.
   The gate matched his held-back calls on 16 of 20 hooks, after tuning on those same 20.
-- Jev is English-first. How well it reads Tagalog and Taglish comments is untested.
+- Jev is English-first. A few common Tagalog shopping phrases read correctly in a small test,
+  helped by a hint in the question. Longer or slangier Tagalog and Taglish is untested.
+- "Want to buy" was written for post comments. On product reviews it mostly finds repeat buyers.
 - The gate is a coarse filter. It kills hype and claims and asks about close calls, but it still
   passes some hooks Nap rejected. It does not yet tell a good personal hook from a weak one.
 - The automated tests cover mock mode and canned Jev answers only.
