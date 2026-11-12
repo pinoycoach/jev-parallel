@@ -157,6 +157,7 @@
   <aside class="panel skill">
     <h2>Skill file: what it has learned from your calls</h2>
     <pre id="skill">(nothing yet)</pre>
+    <div class="err" id="skill-err"></div>
   </aside>
 </main>
 
@@ -213,6 +214,7 @@ function render() {
   $('run').disabled = $('run-own').disabled = s.busy || working;
 
   renderSkill(s.skill);
+  $('skill-err').textContent = s.skillError ? 'The rule file was not updated: ' + s.skillError : '';
   const r = s.run; $('results').hidden = !r; if (!r) return;
   $('b-replay').hidden = !r.replay;
   $('c-made').textContent = r.counts.made; $('c-pass').textContent = r.counts.passed;

@@ -29,6 +29,7 @@ let job = { phase: 'idle', done: 0, total: 0, error: null };
 let busy = false;
 let reading = null; // the last comment read: { hook, taught, ...result }
 let readingBusy = false;
+let skillError = null; // why the rule file was not updated on the last compile, if it was not
 
 // Load the cached run so the demo can replay if the network dies. It is labelled as a replay.
 if (fs.existsSync(RUN_FILE)) {
@@ -87,6 +88,7 @@ function publicState() {
       last: run.last || null,
     },
     skill: skill.readSkill(),
+    skillError,
     reading: reading && { ...reading, items: undefined },
     readingBusy,
   };
@@ -112,6 +114,7 @@ async function startRun(product, pastedText) {
   try {
     const calls = readCalls();
     const compiled = await skill.compile(calls);
+    skillError = compiled.error || null;
 
     let gen;
     if (pasted.length) {
@@ -169,6 +172,7 @@ async function humanCall(id, verdict, why) {
     appendCall({ verdict, hook: item.hook, why });
     const calls = readCalls();
     const compiled = await skill.compile(calls);
+    skillError = compiled.error || null;
 
     // Re-screen what is still waiting, with the updated skill file. Some cards leave the queue.
     const waiting = run.items.filter((it) => it.status === 'borderline' && !it.human);
@@ -265,7 +269,7 @@ const server = http.createServer(async (req, res) => {
       appendCall({ verdict, hook: reading.hook, why });
       reading.taught = verdict;
       busy = true;
-      try { await skill.compile(readCalls()); } finally { busy = false; }
+      try { const c = await skill.compile(readCalls()); skillError = c.error || null; } finally { busy = false; }
       return send(res, 200, publicState());
     }
     send(res, 404, { error: 'not found' });
