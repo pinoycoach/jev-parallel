@@ -232,12 +232,12 @@ function render() {
     $('reveal').className = 'reveal ' + (l.right ? 'right' : 'wrong');
     $('rv-title').textContent = l.right
       ? 'It guessed you: ' + l.agentGuess
-      : 'It guessed ' + l.agentGuess + '. You said ' + l.yourCall + '. Rule rewritten.';
+      : 'It guessed ' + l.agentGuess + '. You said ' + l.yourCall + '. Your call is now one of its examples.';
     const bits = [];
     if (l.diff.added.length) bits.push(l.diff.added.length + ' rule line(s) added');
     if (l.diff.removed.length) bits.push(l.diff.removed.length + ' removed');
     if (l.movedOutOfQueue) bits.push(l.movedOutOfQueue + ' card(s) left your queue');
-    $('rv-sub').textContent = bits.length ? bits.join(' · ') : 'No rule change needed.';
+    $('rv-sub').textContent = bits.length ? bits.join(' · ') : 'No change to the rule file.';
     $('rv-tally').textContent = 'Guessed your call right ' + r.tally.right + ' of ' + r.tally.guesses + ' times.';
   }
   $('s-pass').textContent = 'Passed without you (' + r.passed.length + ')';
@@ -257,7 +257,7 @@ $('product').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('run'
 
 async function call(verdict) {
   if (working) return; working = true; render();
-  $('phase').textContent = 'Rewriting the rule and re-sorting your queue…';
+  $('phase').textContent = 'Adding your call and re-sorting your queue…';
   try {
     const out = await api('/api/call', { id: Number($('card').dataset.id), verdict });
     lastDiff = out.last.diff; state = out.state;
