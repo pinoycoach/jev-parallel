@@ -54,6 +54,7 @@ const skill = require('../lib/skill');
   console.log(`would go to the human as borderline: ${borderline}`);
   if (autoKillMisses) console.log(`of the misses, ${autoKillMisses} were auto-kills (generic copy or a health/guaranteed claim) on hooks you approved. That is the claims filter disagreeing with your ear, not the taste gate.`);
   if (misses.length) console.log('misses:\n' + misses.join('\n'));
+  if (gate.provider() === 'jev') console.log(`Jev input tokens used: ${require('../adapters/jev').tokensUsed()}`);
   console.log(pct >= 80 ? 'PASS: keep this gate.' : 'BELOW BAR: propose swapping the model behind the gate. Nap decides.');
 })().catch((err) => {
   console.error('noon test failed:', err.message);

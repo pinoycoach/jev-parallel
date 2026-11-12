@@ -39,7 +39,7 @@ const calls = [
   assert.strictEqual(body.state.hook, 'Day one I hated it');
   assert.deepStrictEqual(body.state.approved_examples, ['My mother laughed at the price until she tried it']);
   assert.deepStrictEqual(body.state.rejected_examples, ['This revolutionary product will change your life']);
-  assert.deepStrictEqual(Object.keys(body.questions), ['approve', 'generic', 'claim', 'a_1', 'a_2', 'k_1', 'k_2']);
+  assert.deepStrictEqual(Object.keys(body.questions), ['approve', 'reject', 'generic', 'claim', 'a_1', 'a_2', 'k_1', 'k_2']);
   assert.ok(Object.values(body.questions).every((q) => q.type === 'noul'));
 
   // 3. Mapping: clear pass, clear kill, borderline with doubts named.
@@ -58,6 +58,11 @@ const calls = [
   assert.ok(claimKill.reason.startsWith('auto-kill: health'));
   const slopKill = jev.mapResponse({ answers: { approve: { noul: 0.9 }, claim: { noul: 0.1 }, generic: { noul: 0.85 } } }, rules);
   assert.ok(slopKill.verdict === 'kill' && slopKill.reason.includes('generic AI copy'));
+  // Both directions are averaged: a "yes" to both questions lands in the middle.
+  const yesToBoth = jev.mapResponse({ answers: { approve: { noul: 0.84 }, reject: { noul: 0.8 } } }, rules);
+  assert.deepStrictEqual([yesToBoth.verdict, yesToBoth.confidence], ['pass', 0.52]);
+  const agree = jev.mapResponse({ answers: { approve: { noul: 0.9 }, reject: { noul: 0.1 } } }, rules);
+  assert.deepStrictEqual([agree.verdict, agree.confidence], ['pass', 0.9]);
   const rulesIgnored = jev.mapResponse({ answers: { approve: { noul: 0.9 }, a_1: { noul: 0.0 }, a_2: { noul: 0.0 }, k_1: { noul: 1.0 }, k_2: { noul: 1.0 } } }, rules);
   assert.strictEqual(rulesIgnored.verdict, 'pass', 'rule answers explain, they do not decide');
 

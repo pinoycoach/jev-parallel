@@ -59,6 +59,15 @@ function buildRequest(hook, rules, calls, model) {
         'editor rejected. Judged only by those examples, this editor would approve the text in "hook": ' +
         'it sits closer to the approved examples than to the rejected ones.',
     },
+    // The same question asked the other way round. Jev leaned towards "yes" in our earlier tests
+    // (position bias), so the verdict averages both: p = (p(approve) + 1 - p(reject)) / 2.
+    reject: {
+      type: 'noul',
+      instructions:
+        'approved_examples are ad hooks one editor approved; rejected_examples are hooks the same ' +
+        'editor rejected. Judged only by those examples, this editor would reject the text in "hook": ' +
+        'it sits closer to the rejected examples than to the approved ones.',
+    },
     generic: {
       type: 'noul',
       instructions:
@@ -96,8 +105,10 @@ const short = (s) => (s.length > 48 ? s.slice(0, 47) + '…' : s);
 function mapResponse(json, rules) {
   const answers = json && typeof json === 'object' ? json.answers : null;
   if (!answers || typeof answers !== 'object') throw new Error('Jev response had no answers');
-  const p = noulP(answers.approve);
-  if (p === null) throw new Error('Jev answer missing for the approve question');
+  const pa = noulP(answers.approve);
+  if (pa === null) throw new Error('Jev answer missing for the approve question');
+  const pr = noulP(answers.reject);
+  const p = pr === null ? pa : (pa + (1 - pr)) / 2;
 
   // A rule is "in doubt" when it pulls against the overall lean.
   const doubts = [];
@@ -124,7 +135,7 @@ function mapResponse(json, rules) {
 
   const verdict = p >= 0.5 ? 'pass' : 'kill';
   const confidence = Number(Math.max(p, 1 - p).toFixed(2));
-  const reason = `Jev p(closer to your approved calls) ${p.toFixed(2)}` + (doubts.length ? ` · ${doubts.slice(0, 2).map((d) => d.text).join('; ')}` : ' · no rule in doubt');
+  const reason = `Jev p(closer to your approved calls) ${p.toFixed(2)}` + (pr === null ? '' : ` (yes ${pa.toFixed(2)}, no ${pr.toFixed(2)})`) + (doubts.length ? ` · ${doubts.slice(0, 2).map((d) => d.text).join('; ')}` : ' · no rule in doubt');
   return { verdict, confidence, reason: reason.slice(0, 160) };
 }
 
