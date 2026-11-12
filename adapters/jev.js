@@ -131,8 +131,11 @@ function mapResponse(json, rules) {
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 async function callJev(body) {
+  // JEV_NO_AUTH=1: send no key. For environments where a proxy attaches the credential
+  // (a Claude Code cloud environment with an API credential for api.typesafe.ai).
+  const noAuth = process.env.JEV_NO_AUTH === '1';
   const key = process.env.TYPESAFE_API_KEY;
-  if (!key) throw new Error('TYPESAFE_API_KEY is not set');
+  if (!key && !noAuth) throw new Error('TYPESAFE_API_KEY is not set');
   const url = process.env.TYPESAFE_BASE_URL || DEFAULT_URL;
   let lastErr;
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
@@ -141,7 +144,7 @@ async function callJev(body) {
     try {
       const res = await fetch(url, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+        headers: noAuth ? { 'Content-Type': 'application/json' } : { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
         signal: controller.signal,
       });
@@ -171,7 +174,7 @@ async function callJev(body) {
 }
 
 async function judgeBatch(hooks, skillText, calls) {
-  if (!process.env.TYPESAFE_API_KEY) throw new Error('TYPESAFE_API_KEY is not set');
+  if (!process.env.TYPESAFE_API_KEY && process.env.JEV_NO_AUTH !== '1') throw new Error('TYPESAFE_API_KEY is not set');
   const rules = parseRules(skillText);
   const model = process.env.JEV_MODEL || 'jev-latest';
   const limit = Math.max(1, Number(process.env.JEV_CONCURRENCY) || 2);
