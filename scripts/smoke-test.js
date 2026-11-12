@@ -60,7 +60,7 @@ const { server } = require('../server');
       console.log('no borderline cards in this mock run; call path not exercised');
     }
     // Comment reader, mock mode.
-    const pasted = ['How much is this? I want one', 'Where can I buy, as a mom I need this for my kid', 'Scam, this is fake', 'Too expensive for me', 'love it', '@friend', 'maybe hmm'].join('\n');
+    const pasted = ['How much is this? I want one', 'Where can I buy, as a mom I need this for my kid', 'Scam, this is fake', 'Too expensive for me', 'love it', '@friend', 'hmm idk'].join('\n');
     assert.strictEqual((await post('/api/comments', { text: '' })).status, 500, 'empty paste is refused');
     const cr = await post('/api/comments', { text: pasted, hook: 'I tested the cheap one for a month' });
     assert.strictEqual(cr.status, 200);
