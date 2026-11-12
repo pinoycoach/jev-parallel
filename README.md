@@ -110,3 +110,25 @@ node scripts/noon-test.js    # match rate against calls/holdout.md, bar is 80%
 - The gate is a coarse filter. It kills hype and claims and asks about close calls, but it still
   passes some hooks Nap rejected. It does not yet tell a good personal hook from a weak one.
 - The automated tests cover mock mode and canned Jev answers only.
+
+## Hosting it (Google Cloud Run)
+
+The app runs as it is in a container (`Dockerfile`). Three things differ from a laptop:
+
+- **Password and cap.** Set `APP_PASSWORD` and `DAILY_CAP`. On Cloud Run the server refuses to
+  start without a password, because anyone with the link could otherwise spend the API keys.
+- **Keys** go in Secret Manager and are attached to the service as environment variables
+  (`TYPESAFE_API_KEY`, `ANTHROPIC_API_KEY`, `APP_PASSWORD`). Never in the repo.
+- **One instance, CPU always on.** The run is held in memory and continues after the page's
+  request returns, so deploy with `--max-instances 1 --no-cpu-throttling`.
+
+```
+gcloud run deploy who-are-they --source . --region asia-southeast1 \
+  --max-instances 1 --no-cpu-throttling --allow-unauthenticated \
+  --set-env-vars GATE=jev,DAILY_CAP=20 \
+  --set-secrets TYPESAFE_API_KEY=typesafe-api-key:latest,ANTHROPIC_API_KEY=anthropic-api-key:latest,APP_PASSWORD=app-password:latest
+```
+
+Limits of the hosted copy: everyone who logs in shares one screen (one run, one comment read at a
+time), and calls taught on the page are lost when the instance restarts, which returns it to the 30
+calls in `calls/calls.md`.

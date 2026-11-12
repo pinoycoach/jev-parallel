@@ -24,6 +24,37 @@ const RUN_FILE = path.join(DATA, 'run.json');
 const PORT = Number(process.env.PORT) || 3000;
 const TOTAL = Number(process.env.TOTAL) || 200;
 
+// ---- hosting guards (off on a laptop, required when hosted) ----
+// APP_PASSWORD: if set, every request needs it (browser login box, any user name).
+// DAILY_CAP: if set, the number of paid actions (hook runs + comment reads) allowed per UTC day.
+const crypto = require('crypto');
+const APP_PASSWORD = process.env.APP_PASSWORD || '';
+const DAILY_CAP = Number(process.env.DAILY_CAP) > 0 ? Number(process.env.DAILY_CAP) : 0;
+const HOSTED = Boolean(process.env.K_SERVICE); // set by Cloud Run
+let spend = { day: '', used: 0 };
+
+function authorised(req) {
+  if (!APP_PASSWORD) return true;
+  const m = /^Basic\s+(.+)$/i.exec(req.headers.authorization || '');
+  if (!m) return false;
+  const decoded = Buffer.from(m[1], 'base64').toString('utf8');
+  const given = decoded.slice(decoded.indexOf(':') + 1);
+  const a = crypto.createHash('sha256').update(given).digest();
+  const b = crypto.createHash('sha256').update(APP_PASSWORD).digest();
+  return crypto.timingSafeEqual(a, b);
+}
+
+// Returns false when today's cap is spent. Counts one paid action otherwise.
+function spendOne() {
+  if (!DAILY_CAP) return true;
+  const day = new Date().toISOString().slice(0, 10);
+  if (spend.day !== day) spend = { day, used: 0 };
+  if (spend.used >= DAILY_CAP) return false;
+  spend.used += 1;
+  return true;
+}
+const CAP_MSG = { error: 'daily limit reached for this demo link; it resets at midnight UTC' };
+
 let run = null; // the current or last run
 let job = { phase: 'idle', done: 0, total: 0, error: null };
 let busy = false;
@@ -220,6 +251,10 @@ function send(res, code, obj) {
 
 const server = http.createServer(async (req, res) => {
   try {
+    if (!authorised(req)) {
+      res.writeHead(401, { 'www-authenticate': 'Basic realm="Who are they?", charset="UTF-8"', 'content-type': 'text/plain' });
+      return res.end('Password required.');
+    }
     if (req.method === 'GET' && (req.url === '/' || req.url === '/index.html')) {
       res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
       return res.end(fs.readFileSync(path.join(__dirname, 'public', 'index.html')));
@@ -231,6 +266,7 @@ const server = http.createServer(async (req, res) => {
       const hooksText = String(body.hooks || '');
       const product = String(body.product || '').trim().slice(0, 120) || (parsePasted(hooksText).length ? 'pasted hooks' : '');
       if (!product) return send(res, 400, { error: 'name a product, or paste hooks to screen' });
+      if (!spendOne()) return send(res, 429, CAP_MSG);
       startRun(product, hooksText); // runs in the background; the page polls /api/state
       return send(res, 202, { ok: true });
     }
@@ -246,6 +282,7 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'POST' && req.url === '/api/comments') {
       if (readingBusy) return send(res, 409, { error: 'busy' });
       const body = await readBody(req);
+      if (!spendOne()) return send(res, 429, CAP_MSG);
       readingBusy = true;
       try {
         const result = await comments.readComments(String(body.text || ''));
@@ -279,7 +316,12 @@ const server = http.createServer(async (req, res) => {
 });
 
 if (require.main === module) {
+  if (HOSTED && !APP_PASSWORD) {
+    console.error('Refusing to start: hosted without APP_PASSWORD. Anyone with the link could spend the API keys.');
+    process.exit(1);
+  }
   server.listen(PORT, () => {
+    if (APP_PASSWORD) console.log(`password: ON | daily cap: ${DAILY_CAP || 'none'}`);
     console.log(`Sign-off Agent on http://localhost:${PORT}`);
     console.log(`gate: ${gate.provider()} | generator: ${generator.provider()} | borderline under ${gate.border()}`);
   });
