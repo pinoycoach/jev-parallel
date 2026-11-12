@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Sign-off Agent</title>
+<title>Closed Loop: sign-off gate + comment reader</title>
 <style>
   :root { --bg:#0e0f12; --panel:#17191e; --line:#2a2d35; --text:#f2f3f5; --dim:#9aa0ab; --go:#3ddc84; --stop:#ff5d5d; --ask:#ffc247; --accent:#7aa2ff; }
   * { box-sizing:border-box; }
@@ -45,17 +45,68 @@
   .bar i { display:block; height:100%; width:0; background:var(--accent); transition:width .3s; }
   .tally { font-size:15px; margin-top:10px; }
   .err { color:var(--stop); margin-top:10px; }
+  main[hidden] { display:none; }
+  .tabs { display:flex; gap:8px; padding:12px 20px 0; max-width:1300px; margin:0 auto; }
+  .tab { background:transparent; color:var(--dim); border:1px solid var(--line); padding:9px 14px; font-size:14px; }
+  .tab.on { background:var(--panel); color:var(--text); border-color:var(--accent); }
+  textarea { width:100%; min-height:190px; background:#0f1014; color:var(--text); border:1px solid var(--line); border-radius:10px; padding:12px 14px; font:14px/1.45 inherit; resize:vertical; }
+  .bars { margin-top:6px; } .bars div { display:flex; align-items:center; gap:8px; font-size:14px; margin:5px 0; }
+  .bars span { width:92px; color:var(--dim); } .bars i { display:block; height:10px; border-radius:99px; background:var(--accent); min-width:2px; }
+  .quote { font-size:15px; margin:6px 0; padding-left:10px; border-left:3px solid var(--go); } .quote.obj { border-color:var(--stop); } .quote.ask { border-color:var(--ask); }
+  .quote small { color:var(--dim); }
+  .teach { margin-top:14px; padding:14px; border:1px dashed var(--line); border-radius:12px; }
 </style>
 </head>
 <body>
 <header>
-  <h1>Sign-off Agent</h1>
+  <h1>Closed Loop</h1>
   <span class="badge" id="b-gate"></span>
   <span class="badge" id="b-gen"></span>
   <span class="badge warn" id="b-replay" hidden>REPLAY of a saved run</span>
   <span class="badge warn" id="b-place" hidden></span>
 </header>
-<main>
+<nav class="tabs">
+  <button class="tab on" id="t-gate">1 · Before posting: sign-off</button>
+  <button class="tab" id="t-read">2 · After posting: comment reader</button>
+</nav>
+<main id="v-read" hidden>
+  <section class="panel">
+    <h2>Paste the comments from one post, one per line</h2>
+    <textarea id="cm-text" placeholder="Paste comments here. Nothing is fetched from any platform."></textarea>
+    <div class="row" style="margin-top:10px">
+      <input type="text" id="cm-hook" placeholder="Optional: the hook that post used" maxlength="300">
+      <button class="primary" id="cm-run">Read them</button>
+    </div>
+    <div class="sub" id="cm-phase"></div>
+    <div class="err" id="cm-err"></div>
+    <div id="cm-out" hidden>
+      <div class="counts">
+        <div class="count"><b id="cm-read">0</b><span>read</span></div>
+        <div class="count go"><b id="cm-buy">0</b><span>want to buy</span></div>
+        <div class="count stop"><b id="cm-obj">0</b><span>object</span></div>
+        <div class="count ask"><b id="cm-need">0</b><span>need you</span></div>
+      </div>
+      <div class="sub" id="cm-meta"></div>
+      <div class="teach" id="cm-teach" hidden>
+        <div id="cm-teach-text"></div>
+        <div class="row" style="margin-top:10px">
+          <button class="approve" id="cm-yes" style="font-size:15px;padding:12px">Teach the gate: more like this</button>
+          <button class="reject" id="cm-no" style="font-size:15px;padding:12px">Teach the gate: fewer like this</button>
+        </div>
+      </div>
+      <details open><summary>Who wants to buy</summary><div id="cm-buyers"></div></details>
+      <details open><summary>What stops the others</summary><div id="cm-objs"></div></details>
+      <details><summary id="cm-uns-s">Unsure, for a human</summary><div id="cm-uns"></div></details>
+    </div>
+  </section>
+  <aside class="panel">
+    <h2>What stops them</h2><div class="bars" id="cm-blockers"></div>
+    <h2 style="margin-top:18px">Who they say they are</h2><div class="bars" id="cm-who"></div>
+    <h2 style="margin-top:18px">Among the buyers</h2><div class="bars" id="cm-whobuy"></div>
+    <div class="sub" style="margin-top:14px">Only what commenters state about themselves. Most say nothing, and those are left out.</div>
+  </aside>
+</main>
+<main id="v-gate">
   <section class="panel">
     <div class="row">
       <input type="text" id="product" placeholder="Name any product" maxlength="120">
@@ -216,7 +267,63 @@ async function call(verdict) {
 $('yes').onclick = () => call('APPROVE');
 $('no').onclick = () => call('REJECT');
 
-refresh(); setInterval(() => { if (!working) refresh(); }, 1200);
+// ---- comment reader ----
+function tab(which) {
+  $('v-gate').hidden = which !== 'gate'; $('v-read').hidden = which !== 'read';
+  $('t-gate').className = 'tab' + (which === 'gate' ? ' on' : ''); $('t-read').className = 'tab' + (which === 'read' ? ' on' : '');
+}
+$('t-gate').onclick = () => tab('gate'); $('t-read').onclick = () => tab('read');
+
+function bars(el, obj) {
+  const rows = Object.entries(obj || {}).sort((a, b) => b[1] - a[1]);
+  const max = rows.length ? rows[0][1] : 1;
+  el.replaceChildren(...(rows.length ? rows : [['none stated', 0]]).map(([k, n]) => {
+    const d = document.createElement('div'), s = document.createElement('span'), i = document.createElement('i'), b = document.createElement('b');
+    s.textContent = k; i.style.width = Math.round(140 * n / max) + 'px'; b.textContent = n; d.append(s, i, b); return d;
+  }));
+}
+function quotes(el, items, cls, tag) {
+  el.replaceChildren(...(items.length ? items : [{ text: 'None.', p: null }]).map((it) => {
+    const d = document.createElement('div'); d.className = 'quote ' + cls; d.append(it.text + ' ');
+    if (it.p !== null) { const s = document.createElement('small'); s.textContent = '(' + tag(it) + ')'; d.append(s); }
+    return d;
+  }));
+}
+function renderReading() {
+  const r = state && state.reading; $('cm-out').hidden = !r; if (!r) return;
+  const m = r.summary;
+  $('cm-read').textContent = m.read; $('cm-buy').textContent = m.buyers;
+  $('cm-obj').textContent = m.kinds.objection || 0; $('cm-need').textContent = m.needYou;
+  $('cm-meta').textContent = 'read by ' + r.provider.toUpperCase() + (r.provider === 'mock' ? ' (keyword rules, not a model)' : '') +
+    ' in ' + m.seconds + 's' + (m.jevInputTokens !== null ? ' · ' + m.jevInputTokens + ' Jev input tokens' : '') +
+    (m.failed ? ' · ' + m.failed + ' failed and are not counted' : '') +
+    ' · ' + Math.round(m.buyShare * 100) + '% of the comments it was sure about showed buying intent';
+  bars($('cm-blockers'), m.blockers); bars($('cm-who'), m.who); bars($('cm-whobuy'), m.whoAmongBuyers);
+  quotes($('cm-buyers'), r.topBuyers, '', (it) => it.p + (it.who !== 'unstated' ? ' · ' + it.who : ''));
+  quotes($('cm-objs'), r.topObjections, 'obj', (it) => it.p + ' · ' + it.blocker);
+  quotes($('cm-uns'), r.unsure, 'ask', (it) => 'leans ' + it.lean + ' ' + it.p);
+  $('cm-uns-s').textContent = 'Unsure, for a human (' + m.needYou + ')';
+  $('cm-teach').hidden = !r.hook;
+  if (r.hook) {
+    $('cm-teach-text').textContent = r.taught
+      ? 'Added to the gate as ' + r.taught + ': "' + r.hook + '"'
+      : 'This post used: "' + r.hook + '". Your call, based on the numbers above:';
+    $('cm-yes').hidden = $('cm-no').hidden = Boolean(r.taught);
+  }
+}
+$('cm-run').onclick = async () => {
+  const text = $('cm-text').value; if (!text.trim()) { $('cm-text').focus(); return; }
+  $('cm-run').disabled = true; $('cm-err').textContent = ''; $('cm-phase').textContent = 'Reading every comment…';
+  try { state = await api('/api/comments', { text, hook: $('cm-hook').value }); render(); renderReading(); }
+  catch (e) { $('cm-err').textContent = e.message; }
+  $('cm-run').disabled = false; $('cm-phase').textContent = '';
+};
+async function teach(verdict) {
+  try { state = await api('/api/teach', { verdict }); render(); renderReading(); } catch (e) { $('cm-err').textContent = e.message; }
+}
+$('cm-yes').onclick = () => teach('APPROVE'); $('cm-no').onclick = () => teach('REJECT');
+
+refresh().then(renderReading); setInterval(() => { if (!working) refresh(); }, 1200);
 </script>
 </body>
 </html>

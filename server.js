@@ -17,6 +17,7 @@ const { readCalls, appendCall, readSeeds } = require('./lib/calls');
 const generator = require('./lib/generator');
 const gate = require('./lib/gate');
 const skill = require('./lib/skill');
+const comments = require('./lib/comments');
 
 const DATA = path.join(__dirname, 'data');
 const RUN_FILE = path.join(DATA, 'run.json');
@@ -26,6 +27,8 @@ const TOTAL = Number(process.env.TOTAL) || 200;
 let run = null; // the current or last run
 let job = { phase: 'idle', done: 0, total: 0, error: null };
 let busy = false;
+let reading = null; // the last comment read: { hook, taught, ...result }
+let readingBusy = false;
 
 // Load the cached run so the demo can replay if the network dies. It is labelled as a replay.
 if (fs.existsSync(RUN_FILE)) {
@@ -84,6 +87,8 @@ function publicState() {
       last: run.last || null,
     },
     skill: skill.readSkill(),
+    reading: reading && { ...reading, items: undefined },
+    readingBusy,
   };
 }
 
@@ -178,7 +183,7 @@ function readBody(req) {
     let data = '';
     req.on('data', (c) => {
       data += c;
-      if (data.length > 1e5) reject(new Error('body too large'));
+      if (data.length > 3e5) reject(new Error('body too large'));
     });
     req.on('end', () => {
       try { resolve(data ? JSON.parse(data) : {}); } catch (e) { reject(new Error('bad JSON')); }
@@ -213,6 +218,36 @@ const server = http.createServer(async (req, res) => {
       if (!verdict) return send(res, 400, { error: 'verdict must be APPROVE or REJECT' });
       const last = await humanCall(Number(body.id), verdict, String(body.why || '').slice(0, 200));
       return send(res, 200, { last, state: publicState() });
+    }
+    // After posting: read pasted comments. Nothing is fetched from any platform.
+    if (req.method === 'POST' && req.url === '/api/comments') {
+      if (readingBusy) return send(res, 409, { error: 'busy' });
+      const body = await readBody(req);
+      readingBusy = true;
+      try {
+        const result = await comments.readComments(String(body.text || ''));
+        reading = { hook: String(body.hook || '').trim().slice(0, 300), taught: null, at: new Date().toISOString(), ...result };
+        if (result.provider === 'jev') console.log(`comment read: ${result.summary.read} comments, ${result.summary.jevInputTokens} Jev input tokens, ${result.summary.seconds}s`);
+      } finally {
+        readingBusy = false;
+      }
+      return send(res, 200, publicState());
+    }
+    // Close the loop: the human turns what the comments showed into an example call for the gate.
+    if (req.method === 'POST' && req.url === '/api/teach') {
+      if (busy) return send(res, 409, { error: 'busy' });
+      const body = await readBody(req);
+      const verdict = body.verdict === 'APPROVE' ? 'APPROVE' : body.verdict === 'REJECT' ? 'REJECT' : null;
+      if (!verdict) return send(res, 400, { error: 'verdict must be APPROVE or REJECT' });
+      if (!reading || !reading.hook) return send(res, 400, { error: 'no hook was given with the last comment read' });
+      if (reading.taught) return send(res, 400, { error: 'already taught from this read' });
+      const sm = reading.summary;
+      const why = `comments: ${sm.buyers} of ${sm.read} showed buying intent, ${(sm.kinds.objection || 0)} objected (read by ${reading.provider})`;
+      appendCall({ verdict, hook: reading.hook, why });
+      reading.taught = verdict;
+      busy = true;
+      try { await skill.compile(readCalls()); } finally { busy = false; }
+      return send(res, 200, publicState());
     }
     send(res, 404, { error: 'not found' });
   } catch (err) {

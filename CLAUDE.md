@@ -10,16 +10,18 @@ A Decisions section already exists below. Keep it and append to it.
 
 ## What this repo is
 
-Sign-off Agent, a ManilaHack demo. Hard deadline 7 PM Manila, Thu 12 Nov 2026. Effort: pwede na.
+Closed Loop, a ManilaHack demo: a sign-off gate before posting and a comment reader after. Hard deadline 7 PM Manila, Thu 12 Nov 2026. Effort: pwede na.
 Read README.md for the layout.
 
 ## What is left, in order
 
 1. Nap fills `seeds/hooks.md`, `calls/calls.md` and `calls/holdout.md` with his own material.
 2. Add `ANTHROPIC_API_KEY` to `.env`. Run once live and fix what breaks. Only mock mode is tested.
-3. `adapters/jev.js` is written (Nap's go, 12 Nov) but untested live. Set `GATE=jev`,
+3. `adapters/jev.js` and `lib/comments.js` are written but untested live. Set `GATE=jev`,
    `TYPESAFE_API_KEY` and `TOTAL=20`, run once, read the token count in the server log, fix what
-   breaks. Only then run the full 200.
+   breaks. Then paste about 20 real comments into tab 2 and read the result yourself: are the
+   "want to buy" ones right? Tagalog and Taglish comments are the risk (Jev is English-first).
+   If Jev misreads them, `GATE=claude` reads comments too. Only then run the full 200.
 4. Noon: `node scripts/noon-test.js`. Under 80% match, propose swapping the model behind the gate.
    Nap decides.
 5. 3 PM feature freeze. 5 PM three clean run-throughs of the three demo beats.
@@ -52,3 +54,22 @@ Read README.md for the layout.
   `TYPESAFE_API_KEY`. Only the call shape came from voice-lab-jev; no writing set, no eval data.
 - 2026-11-12: Jev's voice eval has no recorded pass (first same-author test failed on position
   bias; the retest has no result on file). The noon test on Nap's holdout hooks decides the gate.
+- 2026-11-12: Pivot to one loop, two halves (Nap's go). Headline is the comment reader: organic
+  posts have no ad tracking, but they have comments, and nobody reads them at volume. The gate is
+  the second half. Reason: sign-off is a pain Parallel is already hiring for; proof that views
+  become customers is the one no role owns. That second claim is inferred from their site, not
+  stated on it.
+- 2026-11-12: Jev gate verdict now comes from examples, not rules. The state carries the human's
+  approved and rejected calls (up to `JEV_EXAMPLES` per side) and one question asks which group
+  the hook is closer to. Rule questions stay only as the "why". Reason: in voice-lab-jev, scoring
+  against written rules ranked AI copies above the real writing on 14 of 14 pairs, while
+  comparing against real examples leaned the right way.
+- 2026-11-12: Two auto-kills in the Jev gate, threshold `JEV_KILL` 0.8 (a starting guess):
+  generic AI copy, and a health or guaranteed-result claim. Parallel's shown clients are
+  supplement, wellness and telehealth brands.
+- 2026-11-12: Comment reader takes pasted comments only. No scraping, no platform API. One Jev
+  call per comment with three choice questions (kind, blocker, who). A comment whose top "kind"
+  probability is under 0.5 goes to the human. "Who" counts only what commenters state.
+- 2026-11-12: The loop is closed by a human tap, not automatically. After a comment read, the
+  human may add that post's hook to calls.md as an APPROVE or REJECT example, with the comment
+  numbers as the why. Reason: comment share is evidence, not proof of sales.

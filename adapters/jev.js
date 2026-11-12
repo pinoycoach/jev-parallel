@@ -5,13 +5,18 @@
 // NOT YET RUN AGAINST THE LIVE API. scripts/jev-test.js checks the mapping with a canned response.
 // First live run: set TOTAL=20 in .env and watch the token count printed in the server log.
 //
-// How it judges one hook:
-//   - one overall question: would this person approve the hook?  -> p(approve)
-//   - one question per rule in the skill file (approve rules and kill rules)
+// How it judges one hook (rewired 12 Nov after the voice-lab-jev results):
+//   - The verdict comes from EXAMPLES, not rules. The state carries the hook plus the human's own
+//     approved and rejected calls, and one question asks which group the hook sits closer to.
+//     In our voice tests, scoring against written rules ranked AI copies above the real writing
+//     on 14 of 14 pairs; comparing against real examples pointed the right way.
+//   - Two auto-kill questions: generic AI-sounding copy, and a health or guaranteed-result claim.
+//     Above JEV_KILL (default 0.8) the hook is killed without a human.
+//   - One question per skill-file rule, used ONLY for the "why" on a card. Never for the verdict.
 // Jev gives no reasons, so the "why" shown on a card is the rules it doubts, with their numbers.
 //
 // Env: TYPESAFE_API_KEY (required), JEV_MODEL (default jev-latest), TYPESAFE_BASE_URL,
-//      JEV_CONCURRENCY (default 2 per batch).
+//      JEV_CONCURRENCY (default 2 per batch), JEV_KILL (default 0.8), JEV_EXAMPLES (default 15 per side).
 
 const DEFAULT_URL = 'https://api.typesafe.ai/v1/systemone';
 const MAX_RULES_PER_SIDE = 5;
@@ -41,28 +46,43 @@ function parseRules(skillText) {
 }
 
 function buildRequest(hook, rules, calls, model) {
+  const per = Math.max(1, Number(process.env.JEV_EXAMPLES) || 15);
   const recent = (verdict) => calls
-    .filter((c) => c.verdict === verdict)
-    .slice(-4)
-    .map((c) => `"${c.hook.slice(0, 90)}"`)
-    .join('; ');
+    .filter((c) => c.verdict === verdict && c.hook)
+    .slice(-per)
+    .map((c) => c.hook.slice(0, 160));
   const questions = {
     approve: {
       type: 'noul',
-      instructions: (
-        'One specific editor would approve this ad hook. ' +
-        `Hooks they approved: ${recent('APPROVE') || 'none yet'}. ` +
-        `Hooks they rejected: ${recent('REJECT') || 'none yet'}.`
-      ).slice(0, 1200),
+      instructions:
+        'approved_examples are ad hooks one editor approved; rejected_examples are hooks the same ' +
+        'editor rejected. Judged only by those examples, this editor would approve the text in "hook": ' +
+        'it sits closer to the approved examples than to the rejected ones.',
+    },
+    generic: {
+      type: 'noul',
+      instructions:
+        'The text in "hook" reads as generic AI-written marketing copy: hype words, stock phrases, ' +
+        'or a tidy formula with nothing specific in it.',
+    },
+    claim: {
+      type: 'noul',
+      instructions:
+        'The text in "hook" claims to cure, treat or prevent a disease or medical condition, or ' +
+        'promises a guaranteed result.',
     },
   };
   rules.approve.forEach((rule, i) => {
-    questions[`a_${i + 1}`] = { type: 'noul', instructions: `This ad hook fits this description: ${rule}`.slice(0, 600) };
+    questions[`a_${i + 1}`] = { type: 'noul', instructions: `The text in "hook" fits this description: ${rule}`.slice(0, 600) };
   });
   rules.kill.forEach((rule, i) => {
-    questions[`k_${i + 1}`] = { type: 'noul', instructions: `This ad hook fits this description: ${rule}`.slice(0, 600) };
+    questions[`k_${i + 1}`] = { type: 'noul', instructions: `The text in "hook" fits this description: ${rule}`.slice(0, 600) };
   });
-  return { model, state: hook, questions };
+  return {
+    model,
+    state: { hook, approved_examples: recent('APPROVE'), rejected_examples: recent('REJECT') },
+    questions,
+  };
 }
 
 function noulP(answer) {
@@ -91,9 +111,20 @@ function mapResponse(json, rules) {
   });
   doubts.sort((a, b) => b.weight - a.weight);
 
+  // Auto-kills come first. They do not depend on anyone's taste.
+  const killAt = Number(process.env.JEV_KILL) > 0 ? Number(process.env.JEV_KILL) : 0.8;
+  const claim = noulP(answers.claim);
+  const generic = noulP(answers.generic);
+  if (claim !== null && claim >= killAt) {
+    return { verdict: 'kill', confidence: Number(claim.toFixed(2)), reason: `auto-kill: health or guaranteed-result claim ${claim.toFixed(2)}` };
+  }
+  if (generic !== null && generic >= killAt) {
+    return { verdict: 'kill', confidence: Number(generic.toFixed(2)), reason: `auto-kill: reads as generic AI copy ${generic.toFixed(2)}` };
+  }
+
   const verdict = p >= 0.5 ? 'pass' : 'kill';
   const confidence = Number(Math.max(p, 1 - p).toFixed(2));
-  const reason = `Jev p(approve) ${p.toFixed(2)}` + (doubts.length ? ` · ${doubts.slice(0, 2).map((d) => d.text).join('; ')}` : ' · no rule in doubt');
+  const reason = `Jev p(closer to your approved calls) ${p.toFixed(2)}` + (doubts.length ? ` · ${doubts.slice(0, 2).map((d) => d.text).join('; ')}` : ' · no rule in doubt');
   return { verdict, confidence, reason: reason.slice(0, 160) };
 }
 
@@ -161,4 +192,4 @@ async function judgeBatch(hooks, skillText, calls) {
   return out;
 }
 
-module.exports = { judgeBatch, parseRules, buildRequest, mapResponse, tokensUsed };
+module.exports = { judgeBatch, parseRules, buildRequest, mapResponse, tokensUsed, callJev };

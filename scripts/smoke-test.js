@@ -59,6 +59,23 @@ const { server } = require('../server');
     } else {
       console.log('no borderline cards in this mock run; call path not exercised');
     }
+    // Comment reader, mock mode.
+    const pasted = ['How much is this? I want one', 'Where can I buy, as a mom I need this for my kid', 'Scam, this is fake', 'Too expensive for me', 'love it', '@friend', 'maybe hmm'].join('\n');
+    assert.strictEqual((await post('/api/comments', { text: '' })).status, 500, 'empty paste is refused');
+    const cr = await post('/api/comments', { text: pasted, hook: 'I tested the cheap one for a month' });
+    assert.strictEqual(cr.status, 200);
+    const rd = cr.body.reading;
+    assert.strictEqual(rd.summary.read, 7);
+    assert.strictEqual(rd.summary.buyers, 2);
+    assert.strictEqual(rd.summary.kinds.objection, 2);
+    assert.strictEqual(rd.summary.needYou, 1, 'the ambiguous comment goes to the human');
+    assert.deepStrictEqual(rd.summary.whoAmongBuyers, { parent: 1 });
+    assert.ok(!('items' in rd) || rd.items === undefined, 'raw item list is not sent');
+    const callsBefore = fs.readFileSync(touched[0], 'utf8');
+    assert.strictEqual((await post('/api/teach', { verdict: 'APPROVE' })).status, 200);
+    assert.ok(fs.readFileSync(touched[0], 'utf8').length > callsBefore.length && fs.readFileSync(touched[0], 'utf8').includes('showed buying intent'), 'teaching appended an example call');
+    assert.strictEqual((await post('/api/teach', { verdict: 'APPROVE' })).status, 400, 'teaching twice is refused');
+    console.log('comments:', JSON.stringify(rd.summary.kinds), 'buyers', rd.summary.buyers);
     console.log('SMOKE TEST PASSED (mock mode)');
   } catch (err) {
     console.error('SMOKE TEST FAILED:', err.message);
