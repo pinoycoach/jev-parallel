@@ -29,17 +29,22 @@ const skill = require('../lib/skill');
   let match = 0;
   let borderline = 0;
   const misses = [];
+  let autoKillMisses = 0;
   holdout.forEach((h, i) => {
     const r = results[i];
     const agentSays = r.lean === 'pass' ? 'APPROVE' : 'REJECT';
     if (r.status === 'borderline') borderline += 1;
     if (agentSays === h.verdict) match += 1;
-    else misses.push(`  you: ${h.verdict}  agent: ${agentSays} (${r.confidence})  "${h.hook}"  <- ${r.reason}`);
+    else {
+      if (String(r.reason).startsWith('auto-kill')) autoKillMisses += 1;
+      misses.push(`  you: ${h.verdict}  agent: ${agentSays} (${r.confidence})  "${h.hook}"  <- ${r.reason}`);
+    }
   });
   const pct = Math.round((match / holdout.length) * 100);
   console.log(`gate: ${gate.provider()}   hooks tested: ${holdout.length}`);
   console.log(`match rate: ${match}/${holdout.length} = ${pct}%   (bar: 80%)`);
   console.log(`would go to the human as borderline: ${borderline}`);
+  if (autoKillMisses) console.log(`of the misses, ${autoKillMisses} were auto-kills (generic copy or a health/guaranteed claim) on hooks you approved. That is the claims filter disagreeing with your ear, not the taste gate.`);
   if (misses.length) console.log('misses:\n' + misses.join('\n'));
   console.log(pct >= 80 ? 'PASS: keep this gate.' : 'BELOW BAR: propose swapping the model behind the gate. Nap decides.');
 })().catch((err) => {
