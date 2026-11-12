@@ -34,7 +34,10 @@ Open http://localhost:3000.
   and canned wording. It shows the flow, not the models.
 - **Tab 1, "Who are they?":** paste the lines from `samples/comments.txt` (sixteen invented
   comments, written for testing) or the comments from any real post, then press Read them.
-- **Tab 2, sign-off:** name a product and press Make 200 hooks. Approve or reject the cards.
+- **Tab 2, sign-off:** name a product and press Make 200 hooks, or open "paste your own hooks"
+  and screen copy you already have. `samples/hooks.txt` holds twenty test hooks that Nap rated in
+  advance and held back, so the gate has never seen them (his verdicts are in `calls/holdout.md`).
+  Approve or reject the cards.
 
 For the real models, copy `.env.example` to `.env` and fill in two keys:
 

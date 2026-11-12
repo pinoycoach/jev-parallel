@@ -73,3 +73,12 @@ Read README.md for the layout.
 - 2026-11-12: The loop is closed by a human tap, not automatically. After a comment read, the
   human may add that post's hook to calls.md as an APPROVE or REJECT example, with the comment
   numbers as the why. Reason: comment share is evidence, not proof of sales.
+- 2026-11-12: First live runs. Noon test, Jev gate: 15 of 20, then 16 of 20 after asking the
+  approve question both ways (tuned on the same 20 hooks, so not a clean test). Claude (Haiku) as
+  the gate also got 16 of 20 with the same four misses, but was under the confidence line on all
+  20. Jev stays as the gate.
+- 2026-11-12: The gate is a coarse filter. It kills hype and claims and passes on-style copy; on
+  a live run of 63 written hooks it passed 60 and killed none, because the writer is told to
+  avoid hype. Tab 2 now also takes pasted hooks, so it can screen a real mix of copy.
+- 2026-11-12: The hook writer returned only some patterns on live runs (cause not confirmed;
+  the error now quotes the model). Writer concurrency is 2 and rate limits are waited out.

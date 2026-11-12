@@ -112,6 +112,10 @@
       <input type="text" id="product" placeholder="Name any product" maxlength="120">
       <button class="primary" id="run">Make 200 hooks</button>
     </div>
+    <details style="margin-top:10px"><summary>Or paste your own hooks to screen, one per line</summary>
+      <textarea id="own-hooks" style="min-height:150px;margin-top:8px" placeholder="Paste hooks here. Nothing is written by a model in this run: the gate screens exactly what you paste."></textarea>
+      <div class="row" style="margin-top:8px;justify-content:flex-end"><button class="primary" id="run-own">Screen these</button></div>
+    </details>
     <div class="bar"><i id="bar"></i></div>
     <div class="sub" id="phase"></div>
     <div class="err" id="err"></div>
@@ -194,6 +198,7 @@ function render() {
   const s = state; if (!s) return;
   $('b-gate').textContent = 'gate: ' + s.providers.gate.toUpperCase();
   $('b-gen').textContent = 'writer: ' + s.providers.generator.toUpperCase();
+  if (s.run && s.run.providers && s.run.providers.generator === 'pasted') $('b-gen').textContent = 'hooks: PASTED IN';
   $('b-gate').className = 'badge' + (s.providers.gate === 'mock' ? ' warn' : '');
   $('b-gen').className = 'badge' + (s.providers.generator === 'mock' ? ' warn' : '');
   const w = s.warnings, notes = [];
@@ -205,7 +210,7 @@ function render() {
   $('bar').style.width = j.total ? Math.round(100 * j.done / j.total) + '%' : '0%';
   $('phase').textContent = running ? j.phase + ' ' + j.done + '/' + j.total : '';
   $('err').textContent = j.error ? 'Run failed: ' + j.error : '';
-  $('run').disabled = s.busy || working;
+  $('run').disabled = $('run-own').disabled = s.busy || working;
 
   renderSkill(s.skill);
   const r = s.run; $('results').hidden = !r; if (!r) return;
@@ -251,6 +256,12 @@ $('run').onclick = async () => {
   const product = $('product').value.trim(); if (!product) { $('product').focus(); return; }
   lastDiff = { added: [], removed: [] };
   try { await api('/api/run', { product }); } catch (e) { $('err').textContent = e.message; }
+  refresh();
+};
+$('run-own').onclick = async () => {
+  const hooks = $('own-hooks').value; if (!hooks.trim()) { $('own-hooks').focus(); return; }
+  lastDiff = { added: [], removed: [] };
+  try { await api('/api/run', { hooks, product: $('product').value.trim() }); } catch (e) { $('err').textContent = e.message; }
   refresh();
 };
 $('product').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('run').click(); });

@@ -60,6 +60,16 @@ const { server } = require('../server');
     } else {
       console.log('no borderline cards in this mock run; call path not exercised');
     }
+    // Pasted hooks: screened as given, no writer involved.
+    assert.strictEqual((await post('/api/run', { hooks: '1. First pasted hook to screen\n- Second pasted hook to screen\nSecond pasted hook to screen\nshort' })).status, 202);
+    for (let i = 0; i < 50; i++) {
+      await new Promise((r) => setTimeout(r, 100));
+      s = await get('/api/state');
+      if (!s.busy && s.run && s.job.phase === 'done' && s.run.product === 'pasted hooks') break;
+    }
+    assert.strictEqual(s.run.counts.made, 2, 'bullets stripped, duplicate and too-short lines dropped');
+    assert.strictEqual(s.run.providers.generator, 'pasted');
+
     // Comment reader, mock mode.
     const pasted = ['How much is this? I want one', 'Where can I buy, as a mom I need this for my kid', 'Scam, this is fake', 'Too expensive for me', 'love it', '@friend', 'hmm idk'].join('\n');
     assert.strictEqual((await post('/api/comments', { text: '' })).status, 500, 'empty paste is refused');

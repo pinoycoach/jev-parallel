@@ -92,20 +92,38 @@ function publicState() {
   };
 }
 
-async function startRun(product) {
+// Lines pasted by a person: one hook per line, bullets and numbering stripped.
+function parsePasted(text) {
+  const seen = new Set();
+  return String(text || '')
+    .split('\n')
+    .map((l) => l.replace(/^\s*(?:[-*•]|\d+[.)])\s+/, '').trim())
+    .filter((l) => l.length >= 8 && l.length <= 300)
+    .filter((l) => (seen.has(l.toLowerCase()) ? false : seen.add(l.toLowerCase())))
+    .slice(0, 300);
+}
+
+async function startRun(product, pastedText) {
+  const pasted = parsePasted(pastedText);
   const seeds = readSeeds();
-  if (!seeds.length) throw new Error('seeds/hooks.md has no patterns');
+  if (!pasted.length && !seeds.length) throw new Error('seeds/hooks.md has no patterns');
   busy = true;
   job = { phase: 'compiling the skill file', done: 0, total: 1, error: null };
   try {
     const calls = readCalls();
     const compiled = await skill.compile(calls);
 
-    job = { phase: 'writing hooks', done: 0, total: seeds.length, error: null };
-    const gen = await generator.generate({
-      product, seeds, total: TOTAL,
-      onProgress: (d, t) => { job.done = d; job.total = t; },
-    });
+    let gen;
+    if (pasted.length) {
+      // The human supplied the hooks. Nothing is written by a model in this run.
+      gen = { items: pasted.map((hook) => ({ hook, pattern: 'pasted in' })), provider: 'pasted' };
+    } else {
+      job = { phase: 'writing hooks', done: 0, total: seeds.length, error: null };
+      gen = await generator.generate({
+        product, seeds, total: TOTAL,
+        onProgress: (d, t) => { job.done = d; job.total = t; },
+      });
+    }
     if (!gen.items.length) throw new Error('generator returned no hooks');
 
     job = { phase: 'screening', done: 0, total: gen.items.length, error: null };
@@ -206,9 +224,10 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'POST' && req.url === '/api/run') {
       if (busy) return send(res, 409, { error: 'busy' });
       const body = await readBody(req);
-      const product = String(body.product || '').trim().slice(0, 120);
-      if (!product) return send(res, 400, { error: 'name a product' });
-      startRun(product); // runs in the background; the page polls /api/state
+      const hooksText = String(body.hooks || '');
+      const product = String(body.product || '').trim().slice(0, 120) || (parsePasted(hooksText).length ? 'pasted hooks' : '');
+      if (!product) return send(res, 400, { error: 'name a product, or paste hooks to screen' });
+      startRun(product, hooksText); // runs in the background; the page polls /api/state
       return send(res, 202, { ok: true });
     }
     if (req.method === 'POST' && req.url === '/api/call') {
