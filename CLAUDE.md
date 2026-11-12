@@ -120,3 +120,8 @@ hooks and the teach loop all ran live on Jev on his laptop; the noon test is rec
   not verified, not committed). Read in 4.1s, about 100k Jev tokens. Complaints about taste,
   texture and bad batches were being filed under trust or fit, so the reader gained two blockers:
   quality and side_effect.
+- 2026-11-12: Claude calls were returning no text because max_tokens was 1200 to 1500; raised to
+  8000. That fixed the empty rule file and the short writer runs (197 of 200 hooks).
+- 2026-11-12: The live writer now produces a batch of mixed quality on purpose (Nap's go). Reason:
+  told to avoid hype, it wrote 197 on-style hooks and the gate passed all 197, which shows nothing.
+  The mix is stated on the writer badge and in the README. Pasted hooks remain the fallback.

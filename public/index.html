@@ -198,7 +198,7 @@ function renderSkill(text) {
 function render() {
   const s = state; if (!s) return;
   $('b-gate').textContent = 'gate: ' + s.providers.gate.toUpperCase();
-  $('b-gen').textContent = 'writer: ' + s.providers.generator.toUpperCase();
+  $('b-gen').textContent = 'writer: ' + s.providers.generator.toUpperCase() + (s.providers.generator === 'claude' ? ' · mixed quality on purpose' : '');
   if (s.run && s.run.providers && s.run.providers.generator === 'pasted') $('b-gen').textContent = 'hooks: PASTED IN';
   $('b-gate').className = 'badge' + (s.providers.gate === 'mock' ? ' warn' : '');
   $('b-gen').className = 'badge' + (s.providers.generator === 'mock' ? ' warn' : '');

@@ -58,6 +58,10 @@ Tab 1 first: a judge pastes the comments from any real post and taps Read. Then 
 3. The judge taps Approve or Reject. The guess is revealed, the skill file rewrites on the right
    (new lines in green), and the queue re-sorts. A running tally shows how often it guessed the judge.
 
+The live writer is told to produce a batch of mixed quality on purpose: about a third strong, a
+third flat, a third the hype and overpromising a strict editor rejects. That is what raw output
+looks like at volume, and it gives the gate real work. The page says so on the writer badge.
+
 ## How it fits together
 
 | Piece | File | What it does |
@@ -98,8 +102,9 @@ node scripts/noon-test.js    # match rate against calls/holdout.md, bar is 80%
 
 ## Not done yet
 
-- `adapters/jev.js` and `lib/comments.js` are written but have never called the live Jev API.
-  First live run: `TOTAL=20`, then about 20 pasted comments.
+- Live runs so far are Nap's own, on 12 Nov 2026, and are recorded in CLAUDE.md under Decisions.
+  The gate matched his held-back calls on 16 of 20 hooks, after tuning on those same 20.
 - Jev is English-first. How well it reads Tagalog and Taglish comments is untested.
-- `calls/calls.md`, `calls/holdout.md` and `seeds/hooks.md` hold placeholders, not Nap's taste.
-- Nothing has been run against a live model. Only the mock path and canned Jev answers are tested.
+- The gate is a coarse filter. It kills hype and claims and asks about close calls, but it still
+  passes some hooks Nap rejected. It does not yet tell a good personal hook from a weak one.
+- The automated tests cover mock mode and canned Jev answers only.
