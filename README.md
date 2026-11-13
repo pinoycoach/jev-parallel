@@ -109,7 +109,18 @@ node scripts/noon-test.js    # match rate against calls/holdout.md, bar is 80%
 - "Want to buy" was written for post comments. On product reviews it mostly finds repeat buyers.
 - The gate is a coarse filter. It kills hype and claims and asks about close calls, but it still
   passes some hooks Nap rejected. It does not yet tell a good personal hook from a weak one.
+- Hype bolted onto an approved structure still passes. On a hosted run of 200 on 13 Nov, about
+  14 of 128 passed hooks were of this kind ("Limited stock, folks. I bought these to prove my mom
+  wrong."). They score as high as clean hooks, so moving the line does not catch them.
+- The child check asks too often. It sent "Then my son left this gummy on my desk" to the human
+  (an adult son giving it), while a near-identical line passed in another run.
+- The ask-a-human line (0.70) was set from one run. On the next run the human was asked about 16%
+  of hooks, above the 5 to 10% this project aimed for.
 - The automated tests cover mock mode and canned Jev answers only.
+
+Next step, not built: when a hook passes on style but strongly hits one of the human's own kill
+rules, send it to the human. The rule file already flags these (the "Limited stock" hook scored
+0.91 on the urgency rule); today the rules only explain a verdict and never route one.
 
 ## Hosting it (Google Cloud Run)
 

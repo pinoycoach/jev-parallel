@@ -135,3 +135,6 @@ hooks and the teach loop all ran live on Jev on his laptop; the noon test is rec
   such hooks passed on the hosted run, and the reviews show parents do give it to children.
   First live run, 13 Nov on the hosted copy: "my toddler's bedtime is a breeze now" scored 0.81 and
   went to the human; "my son left this on my desk" passed. Six hooks, one run.
+- 2026-11-13: Tuning stops here (Nap's pick). Second hosted run of 200 with the new settings:
+  128 passed, 40 killed, 32 need you (16%). No child-use hook passed; about 14 hype hooks still
+  did. Kill-rule routing is written up in the README as the next step, not built.
