@@ -133,4 +133,5 @@ hooks and the teach loop all ran live on Jev on his laptop; the noon test is rec
 - 2026-11-13: A hook that would pass but shows a child using the product goes to the human
   (Jev question `child`, threshold `JEV_CHILD` 0.5, plus a plain-word backstop). Reason: four
   such hooks passed on the hosted run, and the reviews show parents do give it to children.
-  The Jev question has not been run live yet.
+  First live run, 13 Nov on the hosted copy: "my toddler's bedtime is a breeze now" scored 0.81 and
+  went to the human; "my son left this on my desk" passed. Six hooks, one run.
