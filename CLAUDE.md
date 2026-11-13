@@ -125,3 +125,12 @@ hooks and the teach loop all ran live on Jev on his laptop; the noon test is rec
 - 2026-11-12: The live writer now produces a batch of mixed quality on purpose (Nap's go). Reason:
   told to avoid hype, it wrote 197 on-style hooks and the gate passed all 197, which shows nothing.
   The mix is stated on the writer badge and in the README. Pasted hooks remain the fallback.
+- 2026-11-13: Hosted on Cloud Run for the engineers who asked for a link (Nap's go). Password
+  and daily cap are required when hosted. Runs from branch `claude/cloud-run`; `main` unchanged.
+- 2026-11-13: Jev's ask-a-human line moved from 0.65 to 0.70 (Nap's go). Reason: on one hosted
+  run of 200, about 20 of 144 passed hooks were hype bolted onto an approved structure; they
+  scored a median 0.71 against 0.80 for clean ones. Tuned on that one run, not validated.
+- 2026-11-13: A hook that would pass but shows a child using the product goes to the human
+  (Jev question `child`, threshold `JEV_CHILD` 0.5, plus a plain-word backstop). Reason: four
+  such hooks passed on the hosted run, and the reviews show parents do give it to children.
+  The Jev question has not been run live yet.

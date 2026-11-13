@@ -39,7 +39,7 @@ const calls = [
   assert.strictEqual(body.state.hook, 'Day one I hated it');
   assert.deepStrictEqual(body.state.approved_examples, ['My mother laughed at the price until she tried it']);
   assert.deepStrictEqual(body.state.rejected_examples, ['This revolutionary product will change your life']);
-  assert.deepStrictEqual(Object.keys(body.questions), ['approve', 'reject', 'generic', 'claim', 'a_1', 'a_2', 'k_1', 'k_2']);
+  assert.deepStrictEqual(Object.keys(body.questions), ['approve', 'reject', 'generic', 'claim', 'child', 'a_1', 'a_2', 'k_1', 'k_2']);
   assert.ok(Object.values(body.questions).every((q) => q.type === 'noul'));
 
   // 3. Mapping: clear pass, clear kill, borderline with doubts named.
@@ -56,6 +56,21 @@ const calls = [
   const claimKill = jev.mapResponse({ answers: { approve: { noul: 0.9 }, claim: { noul: 0.93 }, generic: { noul: 0.1 } } }, rules);
   assert.deepStrictEqual([claimKill.verdict, claimKill.confidence], ['kill', 0.93]);
   assert.ok(claimKill.reason.startsWith('auto-kill: health'));
+  // A passing hook that shows a child using the product is routed to the human, not passed.
+  const kid = jev.mapResponse({ answers: { approve: { noul: 0.9 }, claim: { noul: 0.1 }, generic: { noul: 0.1 }, child: { noul: 0.88 } } }, rules);
+  assert.deepStrictEqual([kid.verdict, kid.route], ['pass', 'human']);
+  assert.ok(kid.reason.startsWith('needs you: a child'));
+  const noKid = jev.mapResponse({ answers: { approve: { noul: 0.9 }, child: { noul: 0.2 } } }, rules);
+  assert.strictEqual(noKid.route, undefined);
+  // A hook the gate would kill anyway stays killed; the child check does not rescue it.
+  const kidKill = jev.mapResponse({ answers: { approve: { noul: 0.1 }, child: { noul: 0.9 } } }, rules);
+  assert.deepStrictEqual([kidKill.verdict, kidKill.route], ['kill', undefined]);
+  // Word backstop, any provider.
+  assert.ok(gate.mentionsChild("Hear me out: my toddler's bedtime is a breeze now."));
+  assert.ok(gate.mentionsChild("My neighbor's kid now goes down without a fight."));
+  assert.ok(!gate.mentionsChild('At 36 I thought sleep was just hard, now I sleep like a baby forever.'));
+  assert.ok(!gate.mentionsChild('I counted sheep for six years. Then my son left this on my desk.'));
+  assert.strictEqual(gate.border(), 0.7);
   const slopKill = jev.mapResponse({ answers: { approve: { noul: 0.9 }, claim: { noul: 0.1 }, generic: { noul: 0.85 } } }, rules);
   assert.ok(slopKill.verdict === 'kill' && slopKill.reason.includes('generic AI copy'));
   // Both directions are averaged: a "yes" to both questions lands in the middle.
@@ -75,7 +90,7 @@ const calls = [
     if (hook === 'server says no') return { ok: false, status: 400, headers: { get: () => null }, text: async () => 'bad request' };
     return { ok: true, status: 200, headers: { get: () => null }, json: async () => ({ answers: { approve: { noul: canned[hook] } }, usage: { input_tokens: 50 } }) };
   };
-  assert.strictEqual(gate.border(), 0.65, 'Jev uses the 0.35 to 0.65 band by default');
+  assert.strictEqual(gate.border(), 0.7, 'Jev uses the 0.30 to 0.70 band by default');
   const res = await gate.screen(['clear pass', 'clear kill', 'on the edge', 'server says no'], skill, calls);
   assert.deepStrictEqual(res.map((r) => r.status), ['pass', 'kill', 'borderline', 'borderline']);
   assert.strictEqual(res[2].lean, 'pass');

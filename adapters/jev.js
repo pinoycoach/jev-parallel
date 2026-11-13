@@ -12,11 +12,14 @@
 //     on 14 of 14 pairs; comparing against real examples pointed the right way.
 //   - Two auto-kill questions: generic AI-sounding copy, and a health or guaranteed-result claim.
 //     Above JEV_KILL (default 0.8) the hook is killed without a human.
+//   - One routing question: does the hook show a child or teenager using the product? Above
+//     JEV_CHILD (default 0.5) a hook that would have passed goes to the human instead. It is
+//     never passed without a person, and never auto-killed for this reason alone.
 //   - One question per skill-file rule, used ONLY for the "why" on a card. Never for the verdict.
 // Jev gives no reasons, so the "why" shown on a card is the rules it doubts, with their numbers.
 //
 // Env: TYPESAFE_API_KEY (required), JEV_MODEL (default jev-latest), TYPESAFE_BASE_URL,
-//      JEV_CONCURRENCY (default 2 per batch), JEV_KILL (default 0.8), JEV_EXAMPLES (default 15 per side).
+//      JEV_CONCURRENCY (default 2 per batch), JEV_KILL (default 0.8), JEV_CHILD (default 0.5), JEV_EXAMPLES (default 15 per side).
 
 const DEFAULT_URL = 'https://api.typesafe.ai/v1/systemone';
 const MAX_RULES_PER_SIDE = 5;
@@ -80,6 +83,12 @@ function buildRequest(hook, rules, calls, model) {
         'The text in "hook" claims to cure, treat or prevent a disease or medical condition, or ' +
         'promises a guaranteed result.',
     },
+    child: {
+      type: 'noul',
+      instructions:
+        'The text in "hook" describes a child, toddler, baby or teenager (anyone under 18) taking, ' +
+        'being given, or benefiting from the product.',
+    },
   };
   rules.approve.forEach((rule, i) => {
     questions[`a_${i + 1}`] = { type: 'noul', instructions: `The text in "hook" fits this description: ${rule}`.slice(0, 600) };
@@ -136,6 +145,13 @@ function mapResponse(json, rules) {
   const verdict = p >= 0.5 ? 'pass' : 'kill';
   const confidence = Number(Math.max(p, 1 - p).toFixed(2));
   const reason = `Jev p(closer to your approved calls) ${p.toFixed(2)}` + (pr === null ? '' : ` (yes ${pa.toFixed(2)}, no ${pr.toFixed(2)})`) + (doubts.length ? ` · ${doubts.slice(0, 2).map((d) => d.text).join('; ')}` : ' · no rule in doubt');
+
+  // A hook that would pass but shows a child using the product is a person's call, not the gate's.
+  const childAt = Number(process.env.JEV_CHILD) > 0 ? Number(process.env.JEV_CHILD) : 0.5;
+  const child = noulP(answers.child);
+  if (verdict === 'pass' && child !== null && child >= childAt) {
+    return { verdict, confidence, route: 'human', reason: `needs you: a child is using the product ${child.toFixed(2)} · ${reason}`.slice(0, 160) };
+  }
   return { verdict, confidence, reason: reason.slice(0, 160) };
 }
 

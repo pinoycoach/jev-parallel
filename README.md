@@ -77,7 +77,7 @@ looks like at volume, and it gives the gate real work. The page says so on the w
 | Server | `server.js` | Five endpoints: state, run, call, comments, teach |
 
 Borderline is derived, not asked for: any verdict with confidence under `BORDER` (default 0.75)
-goes to the human. With Jev the default is 0.65, which means p(approve) between 0.35 and 0.65.
+goes to the human. With Jev the default is 0.70, which means p(approve) between 0.30 and 0.70. A hook that would pass but shows a child using the product also goes to the human.
 With Jev, the verdict comes from the human's example calls, never from the rules. Two things are
 killed without a human at 0.8 or above: generic AI copy, and health or guaranteed-result claims.
 Jev gives no reasons, so a card's "why" is the skill-file rules Jev doubts, with their numbers. A gate batch that errors goes to the human too. It is never silently passed.
